@@ -94,8 +94,19 @@ class HttpRangeInputStream extends FSInputStream
         if (offset > 0) {
             connection.setRequestProperty("Range", "bytes=" + offset + "-");
         }
-        connection.connect();
-        return connection.getInputStream();
+        int retry = 5;
+        InputStream in = null;
+        while (retry-- >= 0) {
+            try {
+                connection.connect();
+                in = connection.getInputStream();
+            } catch (IOException ex) {
+                if (retry == 0) {
+		    throw ex;
+                }
+            }
+        }
+        return in;
     }
 
     @Override
