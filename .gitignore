@@ -4,3 +4,4 @@ java/*/target
 # Ignore native binaries
 native/4mc
 native/libhadoop-4mc.so.*
+.idea/*
