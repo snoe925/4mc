@@ -101,15 +101,21 @@ class HttpRangeInputStream extends FSInputStream
     @Override
     public int read() throws IOException
     {
-        ++position;
-        return inputStream.read();
+        byte[] b = new byte[1];
+        int n = inputStream.read(b, 0, 1);
+        if (n != 1) {
+            throw new IOException("Failed to read http stream");
+        }
+        return b[0];
     }
 
     @Override
     public int read( byte[] b, int off, int len ) throws IOException
     {
         int n = inputStream.read( b, off, len );
-        position += n;
+        if (n > 0) {
+            position += n;
+        }
         return n;
     }
 
@@ -226,14 +232,20 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod( "HEAD" );
+        connection.setUseCaches(false);
+        connection.setDoInput(true);
+        connection.setDoOutput(true);
         connection.connect();
 
         if( connection.getResponseCode() != 200 )
             throw new FileNotFoundException( "could not find file: " + path );
 
-        long length = connection.getHeaderFieldInt( "Content-Length", 0 );
+        connection.getContent();
 
-        length = length < 0 ? 0 : length; // queries may return -1
+        long length = connection.getContentLengthLong();
+        if (length < 12) {
+            throw new IOException("4mc/4mz file cannot be empty");
+        }
 
         long modified = connection.getHeaderFieldDate( "Last-Modified", System.currentTimeMillis() );
 
